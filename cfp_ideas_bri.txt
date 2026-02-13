@@ -1,0 +1,21 @@
+CFP Ideas for Bri
+Format: lightning | Audience: mixed
+Track: Leadership/Business Development
+==================================================
+
+Idea #1: Team Lead: All Levels
+Type: audience-targeted | Topic: Team Lead
+Abstract: This lightning covers team lead: all levels, with actionable takeaways you can apply immediately.
+
+Idea #2: Team Building without high performance
+Type: cross-pollination | Topic: team building + high performance
+Abstract: In this lightning, we'll explore team building without high performance in the Leadership/Business Development space and share practical insights from real-world experience.
+
+Idea #3: How we refactored a microservice
+Type: experience-based | Topic: refactored a microservice
+Abstract: In this lightning, we'll explore how we refactored a microservice in the Leadership/Business Development space and share practical insights from real-world experience.
+
+Idea #4: Resilience for Leadership/Business Development
+Type: track-aligned | Topic: Resilience
+Abstract: In this lightning, we'll explore resilience for leadership/business development in the Leadership/Business Development space and share practical insights from real-world experience.
+
