@@ -1,21 +1,26 @@
 CFP Ideas for Bri
-Format: lightning | Audience: mixed
-Track: Leadership/Business Development
+Format: talk | Audience: intermediate
+Conference: KubeCon
+Track: Observability
 ==================================================
 
-Idea #1: Team Lead: All Levels
-Type: audience-targeted | Topic: Team Lead
-Abstract: This lightning covers team lead: all levels, with actionable takeaways you can apply immediately.
+Idea #1: Rethinking automated testing
+Type: angle-based | Topic: automated testing
+Abstract: Discover the key concepts behind rethinking automated testing and learn how to apply them in your own projects in the Observability space.
 
-Idea #2: Team Building without high performance
-Type: cross-pollination | Topic: team building + high performance
-Abstract: In this lightning, we'll explore team building without high performance in the Leadership/Business Development space and share practical insights from real-world experience.
+Idea #2: The story of how we navigating team reorgs
+Type: experience-based | Topic: navigating team reorgs
+Abstract: In this talk, we'll explore the story of how we navigating team reorgs in the Observability space and share practical insights from real-world experience.
 
-Idea #3: How we refactored a microservice
-Type: experience-based | Topic: refactored a microservice
-Abstract: In this lightning, we'll explore how we refactored a microservice in the Leadership/Business Development space and share practical insights from real-world experience.
+Idea #3: How we span and trace logging
+Type: experience-based | Topic: span and trace logging
+Abstract: Join us for an engaging session on how we span and trace logging. Perfect for intermediate at KubeCon.
 
-Idea #4: Resilience for Leadership/Business Development
-Type: track-aligned | Topic: Resilience
-Abstract: In this lightning, we'll explore resilience for leadership/business development in the Leadership/Business Development space and share practical insights from real-world experience.
+Idea #4: Navigating re-orgs in observability teams: Maintaining continuity through change
+Type: experience-based | Topic: team reorganization and observability
+Abstract: In this talk, we'll explore lessons learned from navigating organizational restructuring in observability teams. Learn practical strategies for maintaining system knowledge, keeping metrics and dashboards relevant, and ensuring monitoring doesn't break when teams shift.
+
+Idea #5: Knowledge transfer done right: How to hand off observability ownership
+Type: experience-based | Topic: knowledge transfer and documentation
+Abstract: Discover the key concepts behind effective knowledge transfer (KT) in observability contexts. This talk covers best practices for documenting monitoring systems, conducting effective handoffs, and ensuring new team members can confidently own alert response and incident management.
 
