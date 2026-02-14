@@ -1,10 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "cfp-generator"
 version = "0.1.0"
 description = "Generate novel talk/workshop ideas for conference CFP submissions"
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = ["streamlit"]
+dependencies = ["streamlit", "openai"]
+
+[tool.setuptools]
+py-modules = ["app", "cfp_generator"]
 
 [tool.ruff]
 line-length = 100

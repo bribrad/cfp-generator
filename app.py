@@ -4,11 +4,13 @@ CFP Idea Generator - Streamlit App
 Generate novel talk/workshop/speech ideas for conferences.
 """
 
+import os
 import random
 from dataclasses import dataclass
 from typing import Optional
 
 import streamlit as st
+from openai import OpenAI
 
 
 # Conference database with tracks
@@ -327,6 +329,103 @@ def generate_abstract(title: str, profile: UserProfile) -> str:
     return random.choice(abstracts)
 
 
+def generate_key_takeaways(title: str, profile: UserProfile) -> list[str]:
+    """Generate key takeaways for a talk idea."""
+    topic = title.lower()
+    audience = profile.target_audience
+    
+    takeaway_templates = [
+        f"Understand the core principles of {topic}",
+        f"Learn practical techniques for implementing {topic}",
+        f"Identify common pitfalls and how to avoid them",
+        f"Gain hands-on experience with real-world examples",
+        f"Develop a framework for evaluating {topic} solutions",
+        f"Discover best practices used by industry leaders",
+        f"Walk away with actionable steps to apply immediately",
+        f"Build confidence in working with {topic}",
+    ]
+    
+    if audience == "beginners":
+        takeaway_templates.extend([
+            "Get a solid foundation in fundamental concepts",
+            "Learn the essential vocabulary and mental models",
+        ])
+    elif audience == "advanced":
+        takeaway_templates.extend([
+            "Explore edge cases and advanced optimization techniques",
+            "Deep dive into internals and architecture decisions",
+        ])
+    
+    return random.sample(takeaway_templates, min(5, len(takeaway_templates)))
+
+
+def generate_fit_reasons(title: str, profile: UserProfile) -> list[str]:
+    """Generate reasons why this talk would be a good fit."""
+    reasons = []
+    
+    if profile.conference_name:
+        reasons.append(f"Aligns with {profile.conference_name}'s focus on practical, actionable content")
+    
+    if profile.conference_track:
+        reasons.append(f"Directly relevant to the {profile.conference_track} track")
+    
+    reasons.extend([
+        f"Addresses current industry trends and challenges",
+        f"Provides unique insights from hands-on experience",
+        f"Suitable for {profile.target_audience} audience with clear learning outcomes",
+        f"Combines theoretical foundation with practical application",
+        f"Fills a gap in existing conference content",
+    ])
+    
+    if profile.talk_format == "workshop" or profile.talk_format == "tutorial":
+        reasons.append("Hands-on format ensures attendees leave with real skills")
+    elif profile.talk_format == "lightning":
+        reasons.append("Concise format delivers high-impact insights quickly")
+    
+    return reasons[:5]
+
+
+def get_openai_client() -> Optional[OpenAI]:
+    """Get OpenAI client if API key is available."""
+    api_key = os.environ.get("OPENAI_API_KEY")
+    if api_key:
+        return OpenAI(api_key=api_key)
+    return None
+
+
+def chat_with_ai(messages: list[dict], idea: dict, profile: UserProfile) -> str:
+    """Chat with AI about the CFP idea."""
+    client = get_openai_client()
+    if not client:
+        return "Please set OPENAI_API_KEY environment variable to use the AI assistant."
+    
+    system_prompt = f"""You are a helpful CFP (Call for Papers) writing assistant. 
+You're helping a speaker named {profile.name} develop their conference talk idea.
+
+Talk Details:
+- Title: {idea['title']}
+- Format: {profile.talk_format}
+- Target Audience: {profile.target_audience}
+- Conference: {profile.conference_name or 'Not specified'}
+- Track: {profile.conference_track or 'Not specified'}
+- Speaker's Expertise: {', '.join(profile.expertise_areas) or 'Not specified'}
+
+Help them refine their abstract, develop talking points, suggest examples, 
+and improve their submission. Be encouraging but also provide constructive feedback."""
+    
+    full_messages = [{"role": "system", "content": system_prompt}] + messages
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=full_messages,
+            max_tokens=1000,
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error communicating with AI: {str(e)}"
+
+
 def create_download_content(ideas: list[dict], profile: UserProfile) -> str:
     """Create text content for download."""
     lines = [
@@ -348,14 +447,8 @@ def create_download_content(ideas: list[dict], profile: UserProfile) -> str:
     return "\n".join(lines)
 
 
-def main():
-    """Main Streamlit app."""
-    st.set_page_config(
-        page_title="CFP Idea Generator",
-        page_icon="🎤",
-        layout="wide",
-    )
-
+def render_generator_page():
+    """Render the idea generator page."""
     st.title("🎤 CFP Idea Generator")
     st.write("Generate novel talk/workshop ideas for your next conference submission!")
 
@@ -447,6 +540,7 @@ def main():
             # Generate and store ideas
             st.session_state.ideas = generate_ideas(profile, idea_count)
             st.session_state.profile = profile
+            st.rerun()
 
     # Display results
     if "ideas" in st.session_state and "profile" in st.session_state:
@@ -471,20 +565,22 @@ def main():
 
         st.divider()
 
-        # Display ideas
-        for i, idea in enumerate(ideas, 1):
-            with st.expander(f"💡 Idea #{i}: {idea['title']}", expanded=(i <= 3)):
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    st.write(f"**Type:** {idea['type']}")
-                with col_b:
-                    st.write(f"**Core topic:** {idea['topic']}")
-
-                st.write("**Draft abstract:**")
-                st.info(generate_abstract(idea["title"], profile))
+        # Display ideas as selectable cards
+        st.write("**Click on an idea to expand and refine it:**")
+        
+        for i, idea in enumerate(ideas):
+            col_card, col_btn = st.columns([5, 1])
+            with col_card:
+                st.write(f"💡 **{idea['title']}**")
+                st.caption(f"{idea['type']} • {idea['topic']}")
+            with col_btn:
+                if st.button("Expand →", key=f"select_{i}", use_container_width=True):
+                    st.session_state.selected_idea_index = i
+                    st.session_state.chat_messages = []
+                    st.rerun()
+            st.divider()
 
         # Download button
-        st.divider()
         st.download_button(
             label="📥 Download Ideas as Text",
             data=create_download_content(ideas, profile),
@@ -493,15 +589,196 @@ def main():
             use_container_width=True,
         )
 
-        # Tips
-        with st.expander("✨ Tips for refining your CFP"):
-            st.markdown("""
-            - Add a personal story or specific example
-            - Include 3-5 key takeaways attendees will learn
-            - Mention any demos or hands-on components
-            """)
-            if profile.conference_name:
-                st.markdown(f"- Tailor language to **{profile.conference_name}**'s audience")
+
+def render_detail_page():
+    """Render the CFP detail/refinement page."""
+    ideas = st.session_state.ideas
+    profile = st.session_state.profile
+    selected_index = st.session_state.selected_idea_index
+    selected_idea = ideas[selected_index]
+    
+    # Initialize chat messages if not present
+    if "chat_messages" not in st.session_state:
+        st.session_state.chat_messages = []
+    
+    # Sidebar with all ideas
+    with st.sidebar:
+        st.header("📝 Your CFP Ideas")
+        
+        # Back button
+        if st.button("← Back to Generator", use_container_width=True):
+            del st.session_state.selected_idea_index
+            st.rerun()
+        
+        st.divider()
+        
+        # List all ideas
+        for i, idea in enumerate(ideas):
+            is_selected = i == selected_index
+            button_type = "primary" if is_selected else "secondary"
+            
+            if st.button(
+                f"{'✅ ' if is_selected else ''}{idea['title'][:40]}{'...' if len(idea['title']) > 40 else ''}",
+                key=f"sidebar_idea_{i}",
+                use_container_width=True,
+                type=button_type,
+            ):
+                st.session_state.selected_idea_index = i
+                st.session_state.chat_messages = []
+                st.rerun()
+        
+        st.divider()
+        st.caption(f"**Conference:** {profile.conference_name or 'Custom'}")
+        st.caption(f"**Format:** {profile.talk_format.title()}")
+        st.caption(f"**Audience:** {profile.target_audience.title()}")
+    
+    # Main content
+    st.title(f"💡 {selected_idea['title']}")
+    st.caption(f"Type: {selected_idea['type']} • Core topic: {selected_idea['topic']}")
+    
+    # Create tabs for different sections
+    tab_abstract, tab_takeaways, tab_fit, tab_chat = st.tabs([
+        "📄 Abstract", "🎯 Key Takeaways", "✨ Why It's a Good Fit", "🤖 AI Assistant"
+    ])
+    
+    with tab_abstract:
+        st.subheader("Draft Abstract")
+        
+        # Generate or use cached abstract
+        cache_key = f"abstract_{selected_index}"
+        if cache_key not in st.session_state:
+            st.session_state[cache_key] = generate_abstract(selected_idea["title"], profile)
+        
+        abstract = st.text_area(
+            "Edit your abstract:",
+            value=st.session_state[cache_key],
+            height=200,
+            key=f"abstract_edit_{selected_index}",
+        )
+        
+        if abstract != st.session_state[cache_key]:
+            st.session_state[cache_key] = abstract
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("🔄 Regenerate Abstract", use_container_width=True):
+                st.session_state[cache_key] = generate_abstract(selected_idea["title"], profile)
+                st.rerun()
+        with col2:
+            st.download_button(
+                "📋 Copy Abstract",
+                data=abstract,
+                file_name="abstract.txt",
+                mime="text/plain",
+                use_container_width=True,
+            )
+    
+    with tab_takeaways:
+        st.subheader("Key Takeaways")
+        st.write("What attendees will learn from your talk:")
+        
+        # Generate or use cached takeaways
+        cache_key = f"takeaways_{selected_index}"
+        if cache_key not in st.session_state:
+            st.session_state[cache_key] = generate_key_takeaways(selected_idea["title"], profile)
+        
+        takeaways = st.session_state[cache_key]
+        
+        for i, takeaway in enumerate(takeaways, 1):
+            st.write(f"{i}. {takeaway}")
+        
+        if st.button("🔄 Regenerate Takeaways", use_container_width=True):
+            st.session_state[cache_key] = generate_key_takeaways(selected_idea["title"], profile)
+            st.rerun()
+    
+    with tab_fit:
+        st.subheader("Why This Would Be a Good Fit")
+        
+        # Generate or use cached fit reasons
+        cache_key = f"fit_{selected_index}"
+        if cache_key not in st.session_state:
+            st.session_state[cache_key] = generate_fit_reasons(selected_idea["title"], profile)
+        
+        reasons = st.session_state[cache_key]
+        
+        for reason in reasons:
+            st.write(f"✅ {reason}")
+        
+        if st.button("🔄 Regenerate Fit Analysis", use_container_width=True):
+            st.session_state[cache_key] = generate_fit_reasons(selected_idea["title"], profile)
+            st.rerun()
+    
+    with tab_chat:
+        st.subheader("🤖 CFP AI Assistant")
+        st.write("Chat with AI to refine your CFP submission, get feedback, or brainstorm ideas.")
+        
+        # Check for API key
+        if not os.environ.get("OPENAI_API_KEY"):
+            st.warning("⚠️ Set the `OPENAI_API_KEY` environment variable to enable AI chat.")
+            st.code("export OPENAI_API_KEY='your-api-key'")
+        
+        # Display chat history
+        for message in st.session_state.chat_messages:
+            with st.chat_message(message["role"]):
+                st.markdown(message["content"])
+        
+        # Chat input
+        if prompt := st.chat_input("Ask about your CFP idea..."):
+            # Add user message
+            st.session_state.chat_messages.append({"role": "user", "content": prompt})
+            
+            with st.chat_message("user"):
+                st.markdown(prompt)
+            
+            # Get AI response
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = chat_with_ai(
+                        st.session_state.chat_messages,
+                        selected_idea,
+                        profile,
+                    )
+                    st.markdown(response)
+            
+            st.session_state.chat_messages.append({"role": "assistant", "content": response})
+        
+        # Quick action buttons
+        st.divider()
+        st.write("**Quick prompts:**")
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("📝 Improve my abstract", use_container_width=True):
+                prompt = f"Please help me improve this abstract for my talk '{selected_idea['title']}': {st.session_state.get(f'abstract_{selected_index}', '')}"
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                st.rerun()
+            if st.button("💡 Suggest examples", use_container_width=True):
+                prompt = f"What are some good real-world examples or case studies I could include in my talk about '{selected_idea['title']}'?"
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                st.rerun()
+        with col2:
+            if st.button("🎯 Sharpen the focus", use_container_width=True):
+                prompt = f"How can I make my talk '{selected_idea['title']}' more focused and impactful? What should I cut or emphasize?"
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                st.rerun()
+            if st.button("❓ Anticipate Q&A", use_container_width=True):
+                prompt = f"What questions might the audience ask after my talk on '{selected_idea['title']}'? How should I prepare to answer them?"
+                st.session_state.chat_messages.append({"role": "user", "content": prompt})
+                st.rerun()
+
+
+def main():
+    """Main Streamlit app."""
+    st.set_page_config(
+        page_title="CFP Idea Generator",
+        page_icon="🎤",
+        layout="wide",
+    )
+    
+    # Route to appropriate page
+    if "selected_idea_index" in st.session_state and "ideas" in st.session_state:
+        render_detail_page()
+    else:
+        render_generator_page()
 
 
 if __name__ == "__main__":
