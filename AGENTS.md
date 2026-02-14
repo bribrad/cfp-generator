@@ -17,13 +17,14 @@ This project uses Python. When setting up:
 - Use `pyproject.toml` for project configuration and dependencies
 - Consider using `uv` or `poetry` for dependency management
 
-## Commands (to be updated)
+## Commands
 
-Once the project has code:
-- **Install dependencies**: TBD
-- **Run tests**: TBD (use pytest)
-- **Lint**: TBD (use ruff)
-- **Type check**: TBD (use mypy)
+- **Install dependencies**: `pip install -e .` or `pip install streamlit`
+- **Run Streamlit app**: `streamlit run app.py`
+- **Run CLI version**: `python cfp_generator.py` or `cfp-generator`
+- **Run tests**: `pytest test_cfp_generator.py`
+- **Lint**: `ruff check .`
+- **Type check**: `mypy .`
 
 ## Architecture (to be updated)
 
